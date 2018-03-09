@@ -99,3 +99,6 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# build QT
+build-Tracking-object-Desktop_Qt_5_10_1_GCC_64bit-Debug/
