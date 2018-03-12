@@ -26,15 +26,24 @@ int main()
     camera.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
     cv::Mat frame(FRAME_WIDTH, FRAME_HEIGHT, CV_8UC3);
+    cv::Mat frame_gray(FRAME_WIDTH, FRAME_HEIGHT, CV_8UC3);
+    cv::Mat frame_gray_old(FRAME_WIDTH, FRAME_HEIGHT, CV_8UC3);
 
     cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
     cv::moveWindow("Camera", 0, 0);
 
+    camera >> frame;
+    cv::cvtColor(frame, frame_gray_old, CV_RGB2GRAY);
+
     while(true)
     {
         camera >> frame;
+        cv::cvtColor(frame, frame_gray, CV_RGB2GRAY);
 
         cv::imshow("Camera", frame);
+        cv::imshow("Grayscale", frame_gray);
+
+        frame_gray_old = frame_gray;
 
         char user_input = cv::waitKey(FRAME_TIME);
         if(user_input == 27)
