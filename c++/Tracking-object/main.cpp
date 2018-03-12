@@ -7,16 +7,23 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv_modules.hpp>
 
-#define CAM_INDEX 1
+#define CAM_INDEX 0
 #define FRAME_TIME 50
 #define FRAME_WIDTH 1280
 #define FRAME_HEIGHT 720
 #define THRESH_LEVEL 35
+#define BLUR_SIZE 15
+
+std::string int_to_string(int number);
 
 int main()
 {
     bool show_difference = false;
     bool show_threshold = false;
+    bool enable_tracking = false;
+
+    int x_pos = 0;
+    int y_pos = 0;
 
     cv::VideoCapture camera;
     camera.open(CAM_INDEX);
@@ -52,6 +59,48 @@ int main()
 
         cv::absdiff(frame_gray, frame_gray_old, difference_frame);
         cv::threshold(difference_frame, threshold_frame, THRESH_LEVEL, 255, cv::THRESH_BINARY);
+        cv::blur(threshold_frame, threshold_frame, cv::Size(BLUR_SIZE, BLUR_SIZE));
+        cv::threshold(threshold_frame, threshold_frame, THRESH_LEVEL, 255, cv::THRESH_BINARY);
+
+        if(enable_tracking)
+        {
+            bool objectDetected = false;
+
+            cv::Mat temp;
+            threshold_frame.copyTo(temp);
+
+            std::vector<std::vector<cv::Point> > contours;
+            std::vector<cv::Vec4i> hierarchy;
+
+            cv::findContours(temp,contours,hierarchy,CV_RETR_EXTERNAL,CV_CHAIN_APPROX_SIMPLE );// retrieves external contours
+
+            if(contours.size()>0)
+                objectDetected=true;
+            else
+                objectDetected = false;
+
+            if(objectDetected)
+            {
+                std::vector<std::vector<cv::Point> > largestContourVec;
+                largestContourVec.push_back(contours.at(contours.size()-1));
+
+                cv::Rect objectBoundingRectangle = cv::boundingRect(largestContourVec.at(0));
+
+                x_pos = objectBoundingRectangle.x + objectBoundingRectangle.width / 2;
+                y_pos = objectBoundingRectangle.y + objectBoundingRectangle.height / 2;
+            }
+
+            std::cout << "X: " << x_pos << "   Y: " << y_pos << std::endl;
+
+            cv::circle(frame, cv::Point(x_pos, y_pos), 20, cv::Scalar(0,255,0), 2);
+
+            cv::line(frame, cv::Point(x_pos, y_pos), cv::Point(x_pos, y_pos-25), cv::Scalar(0,255,0), 2);
+            cv::line(frame, cv::Point(x_pos, y_pos), cv::Point(x_pos, y_pos+25), cv::Scalar(0,255,0), 2);
+            cv::line(frame, cv::Point(x_pos, y_pos), cv::Point(x_pos-25, y_pos), cv::Scalar(0,255,0), 2);
+            cv::line(frame, cv::Point(x_pos, y_pos), cv::Point(x_pos+25, y_pos), cv::Scalar(0,255,0), 2);
+
+            cv::putText(frame, "Vechicle pos: " + int_to_string(x_pos) + ":" + int_to_string(y_pos), cv::Point(x_pos,y_pos), 1, 1, cv::Scalar(255,0,0), 2);
+        }
 
         //Display image
         cv::imshow("Camera", frame);
@@ -64,7 +113,7 @@ int main()
             cv::imshow("Threshold", threshold_frame);
 
         //Save frame for next step
-        frame_gray_old = frame_gray;
+        frame_gray.copyTo(frame_gray_old);
 
         //Check user input
         char user_input = cv::waitKey(FRAME_TIME);
@@ -104,6 +153,14 @@ int main()
                     break;
                 }
             break;
+
+        case 'q':
+            enable_tracking = !enable_tracking;
+            if(!enable_tracking)
+                std::cout << "Tracking disabled" << std::endl;
+            else
+                std::cout << "Tracking enabled" << std::endl;
+            break;
         }
     }
 
@@ -111,4 +168,11 @@ int main()
     camera.release();
     cv::destroyAllWindows();
     return 0;
+}
+
+std::string int_to_string(int number)
+{
+    std::stringstream ss;
+    ss << number;
+    return ss.str();
 }
