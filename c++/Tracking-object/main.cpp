@@ -25,6 +25,11 @@ int main()
     int x_pos = 0;
     int y_pos = 0;
 
+    struct timespec start_tim, end_tim;
+    unsigned short count_fps = 0;
+    double seconds = 0;
+    double fps = 0;
+
     cv::VideoCapture camera;
     camera.open(CAM_INDEX);
     if(!camera.isOpened())
@@ -61,6 +66,9 @@ int main()
         cv::threshold(difference_frame, threshold_frame, THRESH_LEVEL, 255, cv::THRESH_BINARY);
         cv::blur(threshold_frame, threshold_frame, cv::Size(BLUR_SIZE, BLUR_SIZE));
         cv::threshold(threshold_frame, threshold_frame, THRESH_LEVEL, 255, cv::THRESH_BINARY);
+
+        //Clear terminal
+        std::cout << "\033[2J\033[1;1H";
 
         if(enable_tracking)
         {
@@ -101,6 +109,8 @@ int main()
 
             cv::putText(frame, "Vechicle pos: " + int_to_string(x_pos) + ":" + int_to_string(y_pos), cv::Point(x_pos,y_pos), 1, 1, cv::Scalar(255,0,0), 2);
         }
+
+        std::cout << "FPS: " << fps << ", frame time: " << seconds << std::endl;
 
         //Display image
         cv::imshow("Camera", frame);
@@ -162,6 +172,16 @@ int main()
                 std::cout << "Tracking enabled" << std::endl;
             break;
         }
+
+        if(count_fps > 1000)
+                    {
+                        count_fps = 0;
+                        clock_gettime(CLOCK_MONOTONIC, &end_tim);
+                        seconds = (end_tim.tv_sec - start_tim.tv_sec);
+                        fps  =  1 / (seconds / 1000);
+                    }
+                    else
+                        count_fps++;
     }
 
     //Clean up
